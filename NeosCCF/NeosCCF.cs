@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using FrooxEngine.LogiX;
 
 namespace NeosCCF
 {
@@ -18,6 +19,10 @@ namespace NeosCCF
         public override string Author => "KyuubiYoru";
         public override string Version => "1.0.0";
         public override string Link => "https://github.com/KyuubiYoru/NeosCCF.git";
+        
+        private static CallTargetManager _callTargetManager = new CallTargetManager();
+        
+        public delegate void CallBackDelegate<T>(DynamicImpulseTriggerWithValue<T> value, string[] args);
 
 
         public override void OnEngineInit()
@@ -25,12 +30,21 @@ namespace NeosCCF
             Harmony harmony = new Harmony("net.KyuubiYoru.NeosCCF");
             //harmony.PatchAll();
             DynamicImpulseTriggerPatch.Patch(harmony);
+            
+            
+            _callTargetManager.RegisterCallTarget(typeof(DynamicImpulseTriggerWithValue<string>),"NeosCCF.version", new CallBackDelegate<string>(SendVersion));
+            
+        }
+
+        public void SendVersion<T>(DynamicImpulseTriggerWithValue<T> value, string[] args)
+        {
+            SendImpulseString(true, value.TargetHierarchy.Evaluate(), "NeosCCF.version", Version);
         }
 
         class DynamicImpulseTriggerPatch
         {
             private static readonly MethodInfo prefix = typeof(DynamicImpulseTriggerPatch).GetMethod(nameof(Prefix), AccessTools.all);
-
+            internal static Type[] NeosPrimitiveAndEnumTypes;
             public static void Patch(Harmony harmony)
             {
                 var traverse = Traverse.Create(typeof(GenericTypes));
@@ -50,9 +64,9 @@ namespace NeosCCF
                     .Where(NoGenericTypesFilter)
                     .ToArray();
 
-                var neosPrimitiveAndEnumTypes = neosPrimitiveTypes.Concat(neosEnumTypes).ToArray();
+                NeosPrimitiveAndEnumTypes = neosPrimitiveTypes.Concat(neosEnumTypes).ToArray();
 
-                foreach (var type in neosPrimitiveAndEnumTypes)
+                foreach (var type in NeosPrimitiveAndEnumTypes)
                 {
                     var createdType = typeof(DynamicImpulseTriggerWithValue<>).MakeGenericType(type);
                     var methodInfo = createdType.GetMethod("Run", AccessTools.allDeclared);
@@ -67,12 +81,22 @@ namespace NeosCCF
                 {
                     return false;
                 }
+                Debug("Prefix Type: " + typeof(T));
+                Debug("Instance Type: " + __instance.GetType());
+                Debug("Instance TargetType: " + __instance.Value.TargetType);
+                Debug("Nested Instance Types: ");
+                foreach (var type in __instance.GetType().GetNestedTypes())
+                {
+                    Debug(type.ToString());
+                }
+                
                 string tag = __instance.Tag.Evaluate();
                 Slot slot = __instance.TargetHierarchy.Evaluate();
                 T t = __instance.Value.Evaluate();
                 bool flag = __instance.ExcludeDisabled.Evaluate();
                 if (!tag.StartsWith("NeosCCF"))
                 {
+                    //Run original code
                     if (slot != null)
                     {
                         List<DynamicImpulseReceiverWithValue<T>> list = Pool.BorrowList<DynamicImpulseReceiverWithValue<T>>();
@@ -87,11 +111,15 @@ namespace NeosCCF
                 else
                 {
                     //Run modded code
-
                     try
                     {
+                        
+                        
                         var value = __instance.Value.Evaluate();
-                        string result = value.ToString() + " type: " + value.GetType();
+                        string result = value + " type: " + value.GetType();
+                        _callTargetManager.InvokeCallTarget<T>(tag,__instance);
+                        
+                        
                         SendImpulseString(flag, slot, "echo", result);
                     }
                     catch (Exception e)

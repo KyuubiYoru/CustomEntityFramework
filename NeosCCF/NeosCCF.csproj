@@ -57,6 +57,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CallTargetManager.cs" />
     <Compile Include="ImpulsePatches.cs" />
     <Compile Include="NeosCCF.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
