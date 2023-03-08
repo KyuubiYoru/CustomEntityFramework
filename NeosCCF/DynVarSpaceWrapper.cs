@@ -101,6 +101,8 @@ namespace NeosCCF
 
             for (var i = 1; i < parameters.Length; ++i)
             {
+                var wrapper = parameterWrappers[i - 1];
+
                 if (i == slotParameterIndex)
                 {
                     parameters[i] = spaceSlot;
@@ -113,11 +115,11 @@ namespace NeosCCF
                     continue;
                 }
 
-                if (!parameterWrappers[i].WriteOnly && !parameterWrappers[i].TryReadValue(space, out parameters[i]))
+                if (!wrapper.WriteOnly && !wrapper.TryReadValue(space, out parameters[i]))
                 {
                     if (parameterWrappers[i].IsOptional)
                     {
-                        parameters[i] = parameterWrappers[i].DefaultValue;
+                        parameters[i] = wrapper.DefaultValue;
                         continue;
                     }
 
@@ -135,10 +137,12 @@ namespace NeosCCF
             {
                 for (var i = 1; i < parameters.Length; ++i)
                 {
-                    if (i == slotParameterIndex || i == spaceParameterIndex || !parameterWrappers[i].WriteBack)
+                    var wrapper = parameterWrappers[i - 1];
+
+                    if (i == slotParameterIndex || i == spaceParameterIndex || !wrapper.WriteBack)
                         continue;
 
-                    parameterWrappers[i].TryWriteValue(space, parameters[i]);
+                    wrapper.TryWriteValue(space, parameters[i]);
                 }
             }
 
