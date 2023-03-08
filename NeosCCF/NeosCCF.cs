@@ -10,30 +10,48 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using FrooxEngine.LogiX;
+using System.Collections;
 
 namespace NeosCCF
 {
     public class NeosCCF : NeosMod
     {
-        public override string Name => "NeosCCF";
-        public override string Author => "KyuubiYoru";
-        public override string Version => "1.0.0";
-        public override string Link => "https://github.com/KyuubiYoru/NeosCCF.git";
-        
-        private static CallTargetManager _callTargetManager = new CallTargetManager();
-        
-        public delegate void CallBackDelegate<T>(DynamicImpulseTriggerWithValue<T> value, string[] args);
+        public const string DynamicVariableSpaceName = "CCF";
 
+        private static CallTargetManager _callTargetManager = new CallTargetManager();
+        public override string Author => "KyuubiYoru";
+        public override string Link => "https://github.com/KyuubiYoru/NeosCCF.git";
+        public override string Name => "NeosCCF";
+        public override string Version => "1.0.0";
+
+        public static IEnumerable<MethodBase> GenerateGenericMethodTargets(IEnumerable<Type> genericTypes, string methodName, params Type[] baseTypes)
+        {
+            return GenerateGenericMethodTargets(genericTypes, methodName, (IEnumerable<Type>)baseTypes);
+        }
+
+        public static IEnumerable<MethodBase> GenerateGenericMethodTargets(IEnumerable<Type> genericTypes, string methodName, IEnumerable<Type> baseTypes)
+        {
+            return GenerateMethodTargets(methodName,
+                genericTypes.SelectMany(type => baseTypes.Select(baseType => baseType.MakeGenericType(type))));
+        }
+
+        public static IEnumerable<MethodBase> GenerateMethodTargets(string methodName, params Type[] baseTypes)
+        {
+            return GenerateMethodTargets(methodName, (IEnumerable<Type>)baseTypes);
+        }
+
+        public static IEnumerable<MethodBase> GenerateMethodTargets(string methodName, IEnumerable<Type> baseTypes)
+        {
+            return baseTypes.Select(type => type.GetMethod(methodName, AccessTools.allDeclared)).Where(m => m != null);
+        }
 
         public override void OnEngineInit()
         {
-            Harmony harmony = new Harmony("net.KyuubiYoru.NeosCCF");
+            var harmony = new Harmony("net.KyuubiYoru.NeosCCF");
             //harmony.PatchAll();
             DynamicImpulseTriggerPatch.Patch(harmony);
-            
-            
-            _callTargetManager.RegisterCallTarget(typeof(DynamicImpulseTriggerWithValue<string>),"NeosCCF.version", new CallBackDelegate<string>(SendVersion));
-            
+            CustomFunctionLibrary.RegisterFunction("Version", () => Version);
+            //_callTargetManager.RegisterCallTarget(typeof(DynamicImpulseTriggerWithValue<string>), "NeosCCF.version", new CallBackDelegate<string>(SendVersion));
         }
 
         public void SendVersion<T>(DynamicImpulseTriggerWithValue<T> value, string[] args)
@@ -41,10 +59,45 @@ namespace NeosCCF
             SendImpulseString(true, value.TargetHierarchy.Evaluate(), "NeosCCF.version", Version);
         }
 
-        class DynamicImpulseTriggerPatch
+        private static bool GenericTypesFilter(Type type)
         {
-            private static readonly MethodInfo prefix = typeof(DynamicImpulseTriggerPatch).GetMethod(nameof(Prefix), AccessTools.all);
+            return (!type.IsNested && type.IsGenericType)
+                   || (type.IsNested && (type.IsGenericType || GenericTypesFilter(type.DeclaringType)));
+        }
+
+        private static bool NoGenericTypesFilter(Type type)
+        {
+            return !GenericTypesFilter(type);
+        }
+
+        private static bool PublicTypesFilter(Type type)
+        {
+            return (!type.IsNested && type.IsPublic)
+                   || (type.IsNested && type.IsNestedPublic && PublicTypesFilter(type.DeclaringType));
+        }
+
+        private static void SendImpulseString(bool flag, Slot slot, string tag, string value)
+        {
+            if (slot != null)
+            {
+                List<DynamicImpulseReceiverWithValue<string>> list = Pool.BorrowList<DynamicImpulseReceiverWithValue<string>>();
+                slot.GetComponentsInChildren(list, r => r.Tag.Evaluate(null) == tag, flag);
+                foreach (DynamicImpulseReceiverWithValue<string> dynamicImpulseReceiverWithValue in list)
+                {
+                    dynamicImpulseReceiverWithValue.Trigger(value);
+                }
+                Pool.Return(ref list);
+            }
+        }
+
+        public delegate void CallBackDelegate<T>(DynamicImpulseTriggerWithValue<T> value, string[] args);
+
+        private class DynamicImpulseTriggerPatch
+        {
             internal static Type[] NeosPrimitiveAndEnumTypes;
+            private const string CustomFunctionPrefix = "NeosCCF.";
+            private static readonly MethodInfo prefix = typeof(DynamicImpulseTriggerPatch).GetMethod(nameof(Prefix), AccessTools.all);
+
             public static void Patch(Harmony harmony)
             {
                 var traverse = Traverse.Create(typeof(GenericTypes));
@@ -78,117 +131,74 @@ namespace NeosCCF
             public static bool Prefix<T>(DynamicImpulseTriggerWithValue<T> __instance)
             {
                 if (!__instance.Enabled)
-                {
                     return false;
-                }
-                Debug("Prefix Type: " + typeof(T));
-                Debug("Instance Type: " + __instance.GetType());
-                Debug("Instance TargetType: " + __instance.Value.TargetType);
-                Debug("Nested Instance Types: ");
-                foreach (var type in __instance.GetType().GetNestedTypes())
+
+                Msg("Prefix Type: " + typeof(T));
+                Msg("Instance Type: " + __instance.GetType());
+                Msg("Instance TargetType: " + __instance.Value.TargetType);
+                //Msg("Nested Instance Types: ");
+                //foreach (var type in __instance.GetType().GetNestedTypes())
+                //{
+                //    Msg(type.ToString());
+                //}
+
+                var tag = __instance.Tag.Evaluate();
+                var target = __instance.TargetHierarchy.Evaluate();
+                var excludeDisabled = __instance.ExcludeDisabled.Evaluate();
+
+                T value = default;
+                if (!tag.StartsWith(CustomFunctionPrefix))
                 {
-                    Debug(type.ToString());
-                }
-                
-                string tag = __instance.Tag.Evaluate();
-                Slot slot = __instance.TargetHierarchy.Evaluate();
-                T t = __instance.Value.Evaluate();
-                bool flag = __instance.ExcludeDisabled.Evaluate();
-                if (!tag.StartsWith("NeosCCF"))
-                {
-                    //Run original code
-                    if (slot != null)
-                    {
-                        List<DynamicImpulseReceiverWithValue<T>> list = Pool.BorrowList<DynamicImpulseReceiverWithValue<T>>();
-                        slot.GetComponentsInChildren(list, r => r.Tag.Evaluate() == tag, flag);
-                        foreach (DynamicImpulseReceiverWithValue<T> dynamicImpulseReceiverWithValue in list)
-                        {
-                            dynamicImpulseReceiverWithValue.Trigger(t);
-                        }
-                        Pool.Return(ref list);
-                    }
+                    value = __instance.Value.Evaluate();
                 }
                 else
                 {
-                    //Run modded code
-                    try
-                    {
-                        
-                        
-                        var value = __instance.Value.Evaluate();
-                        string result = value + " type: " + value.GetType();
-                        _callTargetManager.InvokeCallTarget<T>(tag,__instance);
-                        
-                        
-                        SendImpulseString(flag, slot, "echo", result);
-                    }
-                    catch (Exception e)
-                    {
-                        Debug(e.Message);
-                        Debug(e);
-                    }
+                    var name = tag.Remove(0, CustomFunctionPrefix.Length);
+                    CustomFunctionLibrary.InvokeFunction(name, __instance);
+
+                    //var value = __instance.Value.Evaluate();
+                    //string result = value + " type: " + value.GetType();
+                    //_callTargetManager.InvokeCallTarget<T>(tag, __instance);
+
+                    //SendImpulseString(excludeDisabled, target, "echo", result);
+                }
+
+                //Run original code
+                if (target != null)
+                {
+                    var list = Pool.BorrowList<DynamicImpulseReceiverWithValue<T>>();
+                    target.GetComponentsInChildren(list, r => r.Tag.Evaluate() == tag, excludeDisabled);
+
+                    foreach (DynamicImpulseReceiverWithValue<T> dynamicImpulseReceiverWithValue in list)
+                        dynamicImpulseReceiverWithValue.Trigger(value);
+
+                    Pool.Return(ref list);
+
+                    //var instanceType = __instance.GetType().GenericTypeArguments;
+                    //var actualType = typeof(DynamicImpulseTriggerWithValue<>).MakeGenericType(instanceType);
+                    //var runMethod = actualType.GetMethod(nameof(DynamicImpulseTriggerWithValue<T>.Run), AccessTools.all);
+
+                    //var makeFilterMethod = typeof(DynamicImpulseTriggerPatch).GetMethod(nameof(makeImpulseReceiverFilter), AccessTools.all).MakeGenericMethod(instanceType);
+                    //var filterMethod = makeFilterMethod.Invoke(null, new[] { tag });
+
+                    //var targetType = typeof(DynamicImpulseReceiverWithValue<>).MakeGenericType(instanceType);
+                    //var getTargets = typeof(Slot).GetMethods().First(m => m.Name == nameof(Slot.GetComponentsInChildren) && m.GetParameters().Length == 3).MakeGenericMethod(targetType);
+                    //var result = (IEnumerable)getTargets.Invoke(target, new object[] { filterMethod, excludeDisabled, false });
+
+                    //foreach (var item in result)
+                    //    runMethod.Invoke(item, new object[] { value });
                 }
 
                 __instance.OnTriggered.Trigger();
+
                 return false;
             }
-        }
 
-        private static void SendImpulseString(bool flag, Slot slot, string tag, string value)
-        {
-            if (slot != null)
-            {
-                List<DynamicImpulseReceiverWithValue<string>> list = Pool.BorrowList<DynamicImpulseReceiverWithValue<string>>();
-                slot.GetComponentsInChildren(list, r => r.Tag.Evaluate(null) == tag, flag);
-                foreach (DynamicImpulseReceiverWithValue<string> dynamicImpulseReceiverWithValue in list)
-                {
-                    dynamicImpulseReceiverWithValue.Trigger(value);
-                }
-                Pool.Return(ref list);
-            }
-        }
-
-        public static IEnumerable<MethodBase> GenerateGenericMethodTargets(IEnumerable<Type> genericTypes, string methodName, params Type[] baseTypes)
-        {
-            return GenerateGenericMethodTargets(genericTypes, methodName, (IEnumerable<Type>)baseTypes);
-        }
-
-        public static IEnumerable<MethodBase> GenerateGenericMethodTargets(IEnumerable<Type> genericTypes, string methodName, IEnumerable<Type> baseTypes)
-        {
-            return GenerateMethodTargets(methodName,
-                genericTypes.SelectMany(type => baseTypes.Select(baseType => baseType.MakeGenericType(type))));
-        }
-
-        public static IEnumerable<MethodBase> GenerateMethodTargets(string methodName, params Type[] baseTypes)
-        {
-            return GenerateMethodTargets(methodName, (IEnumerable<Type>)baseTypes);
-        }
-
-        public static IEnumerable<MethodBase> GenerateMethodTargets(string methodName, IEnumerable<Type> baseTypes)
-        {
-            return baseTypes.Select(type => type.GetMethod(methodName, AccessTools.allDeclared)).Where(m => m != null);
-        }
-
-        private static bool GenericTypesFilter(Type type)
-        {
-            return (!type.IsNested && type.IsGenericType)
-                   || (type.IsNested && (type.IsGenericType || GenericTypesFilter(type.DeclaringType)));
-        }
-
-        private static bool NoGenericTypesFilter(Type type)
-        {
-            return !GenericTypesFilter(type);
-        }
-
-        private static bool PublicTypesFilter(Type type)
-        {
-            return (!type.IsNested && type.IsPublic)
-                   || (type.IsNested && type.IsNestedPublic && PublicTypesFilter(type.DeclaringType));
+            private static Predicate<DynamicImpulseReceiverWithValue<T>> makeImpulseReceiverFilter<T>(string tag)
+                => receiver => receiver.Tag.Evaluate() == tag;
         }
     }
 }
-
-
 
 //static IEnumerable<MethodBase> TargetMethods()
 //{

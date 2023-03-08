@@ -63,7 +63,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CallTargetManager.cs" />
+    <Compile Include="CustomFunctionLibrary.cs" />
+    <Compile Include="DynVarSpaceWrapper.cs" />
+    <Compile Include="FunctionWrapper.cs" />
     <Compile Include="ImpulsePatches.cs" />
+    <Compile Include="ImpulseValueWrapper.cs" />
     <Compile Include="NeosCCF.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
