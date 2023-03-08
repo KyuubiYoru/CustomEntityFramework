@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace NeosCCF
 {
-    public struct DynamicVariableIdentity : IEquatable<DynamicVariableIdentity>
+    public readonly struct DynamicVariableIdentity : IEquatable<DynamicVariableIdentity>
     {
         public readonly string Name;
         public readonly Type Type;

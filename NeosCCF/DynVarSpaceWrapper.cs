@@ -20,6 +20,7 @@ namespace NeosCCF
         private readonly AccessWrapper[] parameterWrappers;
         private readonly int slotParameterIndex = -1;
         private readonly int spaceParameterIndex = -1;
+        private readonly object target;
         public bool HasSlotParameter => slotParameterIndex >= 0;
 
         public bool HasSpaceParameter => spaceParameterIndex >= 0;
@@ -33,6 +34,8 @@ namespace NeosCCF
         public DynVarSpaceWrapper(Delegate @delegate)
             : base(@delegate)
         {
+            target = @delegate.Target;
+
             if (@delegate.Method.ReturnType == SlotParameterType)
                 UseResult = true;
             else if (@delegate.Method.ReturnType != voidType)
@@ -93,8 +96,10 @@ namespace NeosCCF
             }
 
             var errors = false;
-            var parameters = new object[Parameters];
-            for (var i = 0; i < Parameters; ++i)
+            var parameters = new object[Parameters + 1];
+            parameters[0] = target;
+
+            for (var i = 1; i < parameters.Length; ++i)
             {
                 if (i == slotParameterIndex)
                 {
@@ -128,7 +133,7 @@ namespace NeosCCF
 
             if (WriteBack)
             {
-                for (var i = 0; i < Parameters; ++i)
+                for (var i = 1; i < parameters.Length; ++i)
                 {
                     if (i == slotParameterIndex || i == spaceParameterIndex || !parameterWrappers[i].WriteBack)
                         continue;
