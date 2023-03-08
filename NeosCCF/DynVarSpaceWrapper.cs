@@ -90,36 +90,33 @@ namespace NeosCCF
             if (spaceSlot.GetComponent<DynamicVariableSpace>(matchSpace) is not DynamicVariableSpace space)
             {
                 if (RequiresSpace)
+                {
                     NeosCCF.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function without a proper {NeosCCF.DynamicVariableSpaceName}-DynamicVariableSpace as the value.");
 
-                return null;
+                    return null;
+                }
+
+                space = null;
             }
 
             var errors = false;
             var parameters = new object[Parameters + 1];
+            parameters[slotParameterIndex + 1] = spaceSlot;
+            parameters[spaceParameterIndex + 1] = space;
             parameters[0] = target;
 
-            for (var i = 1; i < parameters.Length; ++i)
+            for (var i = 0; i < Parameters; ++i)
             {
-                var wrapper = parameterWrappers[i - 1];
+                var wrapper = parameterWrappers[i];
 
-                if (i == slotParameterIndex)
-                {
-                    parameters[i] = spaceSlot;
+                if (i == slotParameterIndex || i == spaceParameterIndex)
                     continue;
-                }
 
-                if (i == spaceParameterIndex)
+                if (!wrapper.WriteOnly && !wrapper.TryReadValue(space, out parameters[i + 1]))
                 {
-                    parameters[i] = space;
-                    continue;
-                }
-
-                if (!wrapper.WriteOnly && !wrapper.TryReadValue(space, out parameters[i]))
-                {
-                    if (parameterWrappers[i].IsOptional)
+                    if (wrapper.IsOptional)
                     {
-                        parameters[i] = wrapper.DefaultValue;
+                        parameters[i + 1] = wrapper.DefaultValue;
                         continue;
                     }
 
@@ -135,14 +132,14 @@ namespace NeosCCF
 
             if (WriteBack)
             {
-                for (var i = 1; i < parameters.Length; ++i)
+                for (var i = 0; i < Parameters; ++i)
                 {
-                    var wrapper = parameterWrappers[i - 1];
+                    var wrapper = parameterWrappers[i];
 
                     if (i == slotParameterIndex || i == spaceParameterIndex || !wrapper.WriteBack)
                         continue;
 
-                    wrapper.TryWriteValue(space, parameters[i]);
+                    wrapper.TryWriteValue(space, parameters[i + 1]);
                 }
             }
 
