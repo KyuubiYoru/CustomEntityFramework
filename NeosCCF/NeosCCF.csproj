@@ -64,6 +64,9 @@
   <ItemGroup>
     <Compile Include="CallTargetManager.cs" />
     <Compile Include="CustomFunctionLibrary.cs" />
+    <Compile Include="DynamicVariableIdentity.cs" />
+    <Compile Include="DynamicVariableSpaceHelper.cs" />
+    <Compile Include="DynamicVariable.cs" />
     <Compile Include="DynVarSpaceWrapper.cs" />
     <Compile Include="FunctionWrapper.cs" />
     <Compile Include="ImpulsePatches.cs" />
