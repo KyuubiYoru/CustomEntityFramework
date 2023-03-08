@@ -16,6 +16,11 @@ namespace NeosCCF
             return space.GetVariables<T>().First(variable => variable.Name == name);
         }
 
+        public static DynamicVariable GetVariable(this DynamicVariableSpace space, string name)
+        {
+            return space.GetVariables(name).Single();
+        }
+
         public static IEnumerable<DynamicVariable> GetVariables(this DynamicVariableSpace space, string name)
         {
             return space.GetVariables(variable => variable.Name == name);
