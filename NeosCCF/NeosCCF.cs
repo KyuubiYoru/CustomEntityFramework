@@ -96,6 +96,8 @@ namespace NeosCCF
         {
             internal static Type[] NeosPrimitiveAndEnumTypes;
             private const string CustomFunctionPrefix = "NeosCCF.";
+            private static readonly MethodInfo bareRunReceiverMethod = typeof(DynamicImpulseTriggerPatch).GetMethod(nameof(RunReceivers), AccessTools.all);
+            private static readonly Dictionary<Type, MethodInfo> genericRunReceiversMethods = new();
             private static readonly MethodInfo prefix = typeof(DynamicImpulseTriggerPatch).GetMethod(nameof(Prefix), AccessTools.all);
 
             public static void Patch(Harmony harmony)
@@ -144,7 +146,6 @@ namespace NeosCCF
 
                 var tag = __instance.Tag.Evaluate();
                 var target = __instance.TargetHierarchy.Evaluate();
-                var excludeDisabled = __instance.ExcludeDisabled.Evaluate();
 
                 T value = default;
                 if (!tag.StartsWith(CustomFunctionPrefix))
@@ -154,39 +155,28 @@ namespace NeosCCF
                 else
                 {
                     var name = tag.Remove(0, CustomFunctionPrefix.Length);
-                    CustomFunctionLibrary.InvokeFunction(name, __instance);
-
-                    //var value = __instance.Value.Evaluate();
-                    //string result = value + " type: " + value.GetType();
-                    //_callTargetManager.InvokeCallTarget<T>(tag, __instance);
-
-                    //SendImpulseString(excludeDisabled, target, "echo", result);
+                    value = CustomFunctionLibrary.InvokeFunction(name, __instance);
                 }
 
-                //Run original code
+                // Here to preserve order of evaluations from original
+                var excludeDisabled = __instance.ExcludeDisabled.Evaluate();
+
                 if (target != null)
                 {
-                    var list = Pool.BorrowList<DynamicImpulseReceiverWithValue<T>>();
-                    target.GetComponentsInChildren(list, r => r.Tag.Evaluate() == tag, excludeDisabled);
+                    var type = __instance.GetType().GetGenericArguments()[0];
 
-                    foreach (DynamicImpulseReceiverWithValue<T> dynamicImpulseReceiverWithValue in list)
-                        dynamicImpulseReceiverWithValue.Trigger(value);
+                    if (type.IsValueType)
+                        RunReceivers(target, tag, value, excludeDisabled);
+                    else
+                    {
+                        if (!genericRunReceiversMethods.TryGetValue(type, out var method))
+                        {
+                            method = bareRunReceiverMethod.MakeGenericMethod(type);
+                            genericRunReceiversMethods.Add(type, method);
+                        }
 
-                    Pool.Return(ref list);
-
-                    //var instanceType = __instance.GetType().GenericTypeArguments;
-                    //var actualType = typeof(DynamicImpulseTriggerWithValue<>).MakeGenericType(instanceType);
-                    //var runMethod = actualType.GetMethod(nameof(DynamicImpulseTriggerWithValue<T>.Run), AccessTools.all);
-
-                    //var makeFilterMethod = typeof(DynamicImpulseTriggerPatch).GetMethod(nameof(makeImpulseReceiverFilter), AccessTools.all).MakeGenericMethod(instanceType);
-                    //var filterMethod = makeFilterMethod.Invoke(null, new[] { tag });
-
-                    //var targetType = typeof(DynamicImpulseReceiverWithValue<>).MakeGenericType(instanceType);
-                    //var getTargets = typeof(Slot).GetMethods().First(m => m.Name == nameof(Slot.GetComponentsInChildren) && m.GetParameters().Length == 3).MakeGenericMethod(targetType);
-                    //var result = (IEnumerable)getTargets.Invoke(target, new object[] { filterMethod, excludeDisabled, false });
-
-                    //foreach (var item in result)
-                    //    runMethod.Invoke(item, new object[] { value });
+                        method.Invoke(null, new object[] { target, tag, value, excludeDisabled });
+                    }
                 }
 
                 __instance.OnTriggered.Trigger();
@@ -194,8 +184,16 @@ namespace NeosCCF
                 return false;
             }
 
-            private static Predicate<DynamicImpulseReceiverWithValue<T>> makeImpulseReceiverFilter<T>(string tag)
-                => receiver => receiver.Tag.Evaluate() == tag;
+            private static void RunReceivers<T>(Slot target, string tag, T value, bool excludeDisabled)
+            {
+                var list = Pool.BorrowList<DynamicImpulseReceiverWithValue<T>>();
+                target.GetComponentsInChildren(list, r => r.Tag.Evaluate() == tag, excludeDisabled);
+
+                foreach (var receiver in list)
+                    receiver.Trigger(value);
+
+                Pool.Return(ref list);
+            }
         }
     }
 }

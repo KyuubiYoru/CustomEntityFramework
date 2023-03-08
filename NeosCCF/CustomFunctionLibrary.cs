@@ -116,17 +116,13 @@ namespace NeosCCF
 
             public static T Invoke(string name, DynamicImpulseTriggerWithValue<T> dynImpulseTrigger)
             {
-                var value = InternalInvoke(name, dynImpulseTrigger);
+                if (!registeredFunctions.TryGetValue(name, out var wrapper))
+                {
+                    NeosCCF.Warn($"Attempt to invoke custom function [{name}<{typeof(T).Name}>] which doesn't exist.");
+                    return dynImpulseTrigger.Value.Evaluate();
+                }
 
-                var list = Pool.BorrowList<DynamicImpulseReceiverWithValue<T>>();
-                dynImpulseTrigger.TargetHierarchy.Evaluate()?.GetComponentsInChildren(list, r => r.Tag.Evaluate() == "NeosCCF." + name, dynImpulseTrigger.ExcludeDisabled.Evaluate());
-
-                foreach (DynamicImpulseReceiverWithValue<T> dynamicImpulseReceiverWithValue in list)
-                    dynamicImpulseReceiverWithValue.Trigger(value);
-
-                Pool.Return(ref list);
-
-                return value;
+                return wrapper.Invoke(dynImpulseTrigger);
             }
 
             public static void RegisterFunction(string name, Func<T, T> function)
@@ -145,17 +141,6 @@ namespace NeosCCF
             {
                 registeredFunctions.ThrowIfExists(name);
                 registeredFunctions.Add(name, (FunctionWrapper<T>)(object)new DynVarSpaceWrapper(@delegate));
-            }
-
-            private static T InternalInvoke(string name, DynamicImpulseTriggerWithValue<T> dynImpulseTrigger)
-            {
-                if (!registeredFunctions.TryGetValue(name, out var wrapper))
-                {
-                    NeosCCF.Warn($"Attempt to invoke custom function [{name}<{typeof(T).Name}>] which doesn't exist.");
-                    return dynImpulseTrigger.Value.Evaluate();
-                }
-
-                return wrapper.Invoke(dynImpulseTrigger);
             }
         }
     }
