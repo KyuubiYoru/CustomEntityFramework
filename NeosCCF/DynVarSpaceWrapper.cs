@@ -39,7 +39,7 @@ namespace NeosCCF
                 throw new InvalidOperationException($"Return Type of method [{@delegate.Method.FullDescription()}] using {nameof(DynVarSpaceWrapper)} must be void or Slot!");
 
             var parameters = @delegate.Method.GetParameters();
-            var wrappers = new List<AccessWrapper>(parameterWrappers.Length);
+            var wrappers = new List<AccessWrapper>(parameters.Length);
 
             for (var i = 0; i < parameters.Length; ++i)
             {
