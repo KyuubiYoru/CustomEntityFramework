@@ -32,7 +32,7 @@ namespace NeosCCF
         {
             if (!genericDynamicVariableConstructors.TryGetValue(identity.Type, out var constructor))
             {
-                constructor = bareDynamicVariableType.MakeGenericType(identity.Type).GetConstructors()[0];
+                constructor = bareDynamicVariableType.MakeGenericType(identity.Type).GetConstructors().First(ctr => ctr.GetParameters().Length == 1);
                 genericDynamicVariableConstructors.Add(identity.Type, constructor);
             }
 
