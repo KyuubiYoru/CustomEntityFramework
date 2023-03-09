@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NeosCCF
+namespace CustomEntityFramework.Functions
 {
     public abstract class FunctionWrapper<T>
     {

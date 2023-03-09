@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NeosCCF
+namespace CustomEntityFramework
 {
     public readonly struct DynamicVariableIdentity : IEquatable<DynamicVariableIdentity>
     {

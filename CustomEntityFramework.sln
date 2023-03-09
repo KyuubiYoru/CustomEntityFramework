@@ -1,7 +1,9 @@
-﻿Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeosCCF", "NeosCCF\NeosCCF.csproj", "{0322B2EF-7452-479D-BAE2-FCAB75033337}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeosCCFTest", "NeosCCFTest\NeosCCFTest.csproj", "{152D8012-52EA-49DF-B480-2A8BD1E62C5A}"
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33205.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomEntityFramework", "CustomEntityFramework\CustomEntityFramework.csproj", "{0322B2EF-7452-479D-BAE2-FCAB75033337}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,10 +15,6 @@ Global
 		{0322B2EF-7452-479D-BAE2-FCAB75033337}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0322B2EF-7452-479D-BAE2-FCAB75033337}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0322B2EF-7452-479D-BAE2-FCAB75033337}.Release|Any CPU.Build.0 = Release|Any CPU
-		{152D8012-52EA-49DF-B480-2A8BD1E62C5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{152D8012-52EA-49DF-B480-2A8BD1E62C5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{152D8012-52EA-49DF-B480-2A8BD1E62C5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{152D8012-52EA-49DF-B480-2A8BD1E62C5A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NeosCCF
+namespace CustomEntityFramework
 {
     public abstract class DynamicVariable
     {

@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NeosCCF
+namespace CustomEntityFramework
 {
     public static class DynamicVariableSpaceHelper
     {

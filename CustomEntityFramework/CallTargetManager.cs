@@ -6,71 +6,11 @@ using System.Reflection;
 using FrooxEngine.LogiX.ProgramFlow;
 using NeosModLoader;
 
-namespace NeosCCF
+namespace CustomEntityFramework
 {
     public class CallTargetManager
     {
-        public delegate void CallBackDelegate<T>(DynamicImpulseTriggerWithValue<T> value, string[] args);
-        
-        private Dictionary<Type,Dictionary<string, Delegate>> _callTargets = new Dictionary<Type, Dictionary<string, Delegate>>();
-
-        public void RegisterCallTarget(Type type, string name, Delegate action)
-        {
-            if (!_callTargets.ContainsKey(type))
-            {
-                _callTargets.Add(type, new Dictionary<string, Delegate>());
-            }
-
-            if (_callTargets[type].ContainsKey(name))
-            {
-                NeosMod.Debug("CallTarget already exists: " + name);
-                return;
-            }
-            _callTargets[type].Add(name, action);
-        }
-
-        protected internal void InvokeCallTarget<T>(string targetString, DynamicImpulseTriggerWithValue<T> value)
-        {
-            Type type = value.GetType();
-            NeosMod.Debug(type);
-            if (ParseTargetString(targetString, out string name, out string[] args))
-            {
-                NeosMod.Debug("Invoking CallTarget: " + name + " with args: " + string.Join(", ", args) + "");
-                if (_callTargets.ContainsKey(type))
-                {
-                    NeosMod.Debug("CallTarget Type found: " + type);
-                    if (_callTargets[type].ContainsKey(name))
-                    {
-                        NeosMod.Debug("CallTarget found: " + name);
-                        //_callTargets[typeof(T)][name].Method.Invoke(value, args);
-                        //check for null's
-                        var method = _callTargets[type][name];
-                        if (method == null)
-                        {
-                            NeosMod.Debug("CallTarget delegate is null: " + name);
-                            return;
-                        }  
-                        
-                        if (value == null)
-                        {
-                            NeosMod.Debug("CallTarget value is null: " + name);
-                            return;
-                        }
-                        
-                        NeosMod.Debug("Calling CallTarget: " + name + " with args: " + string.Join(", ", args) + "");
-                        method.DynamicInvoke(value, args);
-                        NeosMod.Debug("Called CallTarget: " + name + " with args: " + string.Join(", ", args) + "");
-
-                    }else NeosMod.Debug("CallTarget not found: " + name);
-                }
-                else
-                {
-                    NeosMod.Debug("CallTarget Type not found: " + type);
-                    
-                }
-
-            }
-        }
+        private Dictionary<Type, Dictionary<string, Delegate>> _callTargets = new Dictionary<Type, Dictionary<string, Delegate>>();
 
         public bool ParseTargetString(string targetString, out string targetName, out string[] args)
         {
@@ -114,5 +54,63 @@ namespace NeosCCF
             NeosMod.Debug(invalidMsg);
             return false;
         }
+
+        public void RegisterCallTarget(Type type, string name, Delegate action)
+        {
+            if (!_callTargets.ContainsKey(type))
+            {
+                _callTargets.Add(type, new Dictionary<string, Delegate>());
+            }
+
+            if (_callTargets[type].ContainsKey(name))
+            {
+                NeosMod.Debug("CallTarget already exists: " + name);
+                return;
+            }
+            _callTargets[type].Add(name, action);
+        }
+
+        protected internal void InvokeCallTarget<T>(string targetString, DynamicImpulseTriggerWithValue<T> value)
+        {
+            Type type = value.GetType();
+            NeosMod.Debug(type);
+            if (ParseTargetString(targetString, out string name, out string[] args))
+            {
+                NeosMod.Debug("Invoking CallTarget: " + name + " with args: " + string.Join(", ", args) + "");
+                if (_callTargets.ContainsKey(type))
+                {
+                    NeosMod.Debug("CallTarget Type found: " + type);
+                    if (_callTargets[type].ContainsKey(name))
+                    {
+                        NeosMod.Debug("CallTarget found: " + name);
+                        //_callTargets[typeof(T)][name].Method.Invoke(value, args);
+                        //check for null's
+                        var method = _callTargets[type][name];
+                        if (method == null)
+                        {
+                            NeosMod.Debug("CallTarget delegate is null: " + name);
+                            return;
+                        }
+
+                        if (value == null)
+                        {
+                            NeosMod.Debug("CallTarget value is null: " + name);
+                            return;
+                        }
+
+                        NeosMod.Debug("Calling CallTarget: " + name + " with args: " + string.Join(", ", args) + "");
+                        method.DynamicInvoke(value, args);
+                        NeosMod.Debug("Called CallTarget: " + name + " with args: " + string.Join(", ", args) + "");
+                    }
+                    else NeosMod.Debug("CallTarget not found: " + name);
+                }
+                else
+                {
+                    NeosMod.Debug("CallTarget Type not found: " + type);
+                }
+            }
+        }
+
+        public delegate void CallBackDelegate<T>(DynamicImpulseTriggerWithValue<T> value, string[] args);
     }
 }

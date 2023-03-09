@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>NeosCCF</RootNamespace>
-    <AssemblyName>NeosCCF</AssemblyName>
+    <RootNamespace>CustomEntityFramework</RootNamespace>
+    <AssemblyName>CustomEntityFramework</AssemblyName>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <LangVersion>latestMajor</LangVersion>
     <FileAlignment>512</FileAlignment>
@@ -63,15 +63,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CallTargetManager.cs" />
-    <Compile Include="CustomFunctionLibrary.cs" />
+    <Compile Include="Functions\DynamicImpulseTriggerPatch.cs" />
+    <Compile Include="Functions\CustomFunctionLibrary.cs" />
     <Compile Include="DynamicVariableIdentity.cs" />
     <Compile Include="DynamicVariableSpaceHelper.cs" />
     <Compile Include="DynamicVariable.cs" />
-    <Compile Include="DynVarSpaceWrapper.cs" />
-    <Compile Include="FunctionWrapper.cs" />
-    <Compile Include="ImpulsePatches.cs" />
-    <Compile Include="ImpulseValueWrapper.cs" />
-    <Compile Include="NeosCCF.cs" />
+    <Compile Include="Functions\DynamicVariableSpaceWrapper.cs" />
+    <Compile Include="Functions\FunctionWrapper.cs" />
+    <Compile Include="Functions\ImpulseValueWrapper.cs" />
+    <Compile Include="CustomEntityFramework.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

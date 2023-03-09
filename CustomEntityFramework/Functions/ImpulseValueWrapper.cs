@@ -1,7 +1,7 @@
 ﻿using FrooxEngine.LogiX.ProgramFlow;
 using System;
 
-namespace NeosCCF
+namespace CustomEntityFramework.Functions
 {
     internal sealed class ImpulseValueWrapper<T> : FunctionWrapper<T>
     {

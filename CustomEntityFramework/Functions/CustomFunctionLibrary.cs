@@ -9,10 +9,13 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NeosCCF
+namespace CustomEntityFramework.Functions
 {
     public static class CustomFunctionLibrary
     {
+        public const string DynamicImpulseTagPrefix = DynamicVariableSpaceName + ".";
+        public const string DynamicVariableSpaceName = "CF";
+
         private static readonly Type bareInternalLibraryType = typeof(InternalLibrary<>);
         private static readonly Dictionary<Type, MethodInfo> genericInvokeFunctions = new();
         private static readonly Dictionary<string, Action> registeredFunctions = new();
@@ -36,8 +39,8 @@ namespace NeosCCF
             }
             catch (Exception e)
             {
-                NeosCCF.Debug(e.Message);
-                NeosCCF.Debug(e);
+                CustomEntityFramework.Debug(e.Message);
+                CustomEntityFramework.Debug(e);
 
                 return default;
             }
@@ -50,12 +53,12 @@ namespace NeosCCF
                 if (registeredFunctions.TryGetValue(name, out var action))
                     action();
                 else
-                    NeosCCF.Warn($"Attempt to invoke custom function [{name}] which doesn't exist.");
+                    CustomEntityFramework.Warn($"Attempt to invoke custom function [{name}] which doesn't exist.");
             }
             catch (Exception e)
             {
-                NeosCCF.Debug(e.Message);
-                NeosCCF.Debug(e);
+                CustomEntityFramework.Debug(e.Message);
+                CustomEntityFramework.Debug(e);
             }
         }
 
@@ -118,7 +121,7 @@ namespace NeosCCF
             {
                 if (!registeredFunctions.TryGetValue(name, out var wrapper))
                 {
-                    NeosCCF.Warn($"Attempt to invoke custom function [{name}<{typeof(T).Name}>] which doesn't exist.");
+                    CustomEntityFramework.Warn($"Attempt to invoke custom function [{name}<{typeof(T).Name}>] which doesn't exist.");
                     return dynImpulseTrigger.Value.Evaluate();
                 }
 
@@ -140,7 +143,7 @@ namespace NeosCCF
             public static void RegisterFunction(string name, Delegate @delegate)
             {
                 registeredFunctions.ThrowIfExists(name);
-                registeredFunctions.Add(name, (FunctionWrapper<T>)(object)new DynVarSpaceWrapper(@delegate));
+                registeredFunctions.Add(name, (FunctionWrapper<T>)(object)new DynamicVariableSpaceWrapper(@delegate));
             }
         }
     }

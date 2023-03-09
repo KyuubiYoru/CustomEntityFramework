@@ -7,9 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace NeosCCF
+namespace CustomEntityFramework.Functions
 {
-    internal sealed class DynVarSpaceWrapper : FunctionWrapper<Slot>
+    internal sealed class DynamicVariableSpaceWrapper : FunctionWrapper<Slot>
     {
         public const string SlotParameterName = "_slot";
         public const string SpaceParameterName = "_space";
@@ -31,7 +31,7 @@ namespace NeosCCF
         public bool UseResult { get; }
         public bool WriteBack { get; } = false;
 
-        public DynVarSpaceWrapper(Delegate @delegate)
+        public DynamicVariableSpaceWrapper(Delegate @delegate)
             : base(@delegate)
         {
             target = @delegate.Target;
@@ -39,7 +39,7 @@ namespace NeosCCF
             if (@delegate.Method.ReturnType == SlotParameterType)
                 UseResult = true;
             else if (@delegate.Method.ReturnType != voidType)
-                throw new InvalidOperationException($"Return Type of method [{@delegate.Method.FullDescription()}] using {nameof(DynVarSpaceWrapper)} must be void or Slot!");
+                throw new InvalidOperationException($"Return Type of method [{@delegate.Method.FullDescription()}] using {nameof(DynamicVariableSpaceWrapper)} must be void or Slot!");
 
             var parameters = @delegate.Method.GetParameters();
             var wrappers = new List<AccessWrapper>(parameters.Length);
@@ -83,7 +83,7 @@ namespace NeosCCF
 
             if (RequiresSlot && spaceSlot == null)
             {
-                NeosCCF.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function without the necessary Slot as the value.");
+                CustomEntityFramework.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function without the necessary Slot as the value.");
                 return null;
             }
 
@@ -91,7 +91,7 @@ namespace NeosCCF
             {
                 if (RequiresSpace)
                 {
-                    NeosCCF.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function without a proper {NeosCCF.DynamicVariableSpaceName}-DynamicVariableSpace as the value.");
+                    CustomEntityFramework.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function without a proper {CustomFunctionLibrary.DynamicVariableSpaceName}-DynamicVariableSpace as the value.");
 
                     return null;
                 }
@@ -124,7 +124,7 @@ namespace NeosCCF
                     }
 
                     errors = true;
-                    NeosCCF.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function while the non-optional parameter [{parameterWrappers}] is missing on the DynamicVariableSpace.");
+                    CustomEntityFramework.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function while the non-optional parameter [{parameterWrappers}] is missing on the DynamicVariableSpace.");
                 }
             }
 
@@ -150,7 +150,7 @@ namespace NeosCCF
         }
 
         private static bool matchSpace(DynamicVariableSpace space)
-            => space.SpaceName.Value == NeosCCF.DynamicVariableSpaceName;
+            => space.SpaceName.Value == CustomFunctionLibrary.DynamicVariableSpaceName;
 
         private delegate T TryGetValue<T>(string name, out T value);
 
