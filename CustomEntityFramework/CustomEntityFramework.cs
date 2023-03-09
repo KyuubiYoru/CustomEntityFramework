@@ -69,8 +69,9 @@ namespace CustomEntityFramework
         public override void OnEngineInit()
         {
             var harmony = new Harmony("net.KyuubiYoru.CustomEntityFramework");
-            //harmony.PatchAll();
-            DynamicImpulseTriggerPatch.Patch(harmony);
+            DynamicImpulseTriggerWithValuePatch.Patch(harmony);
+            harmony.PatchAll();
+
             CustomFunctionLibrary.RegisterFunction("Version", () => Version);
         }
 
@@ -94,15 +95,3 @@ namespace CustomEntityFramework
         public delegate void CallBackDelegate<T>(DynamicImpulseTriggerWithValue<T> value, string[] args);
     }
 }
-
-//static IEnumerable<MethodBase> TargetMethods()
-//{
-//    var type = from asm in AppDomain.CurrentDomain.GetAssemblies().AsParallel() //some c# bs faolan likes
-//        from ti in asm.GetTypes()
-//        where typeof(IWorldElement).IsAssignableFrom(ti)
-//        select ti;
-//    foreach (var t in type)
-//    {
-//        yield return AccessTools.DeclaredPropertySetter(typeof(DynamicImpulseTriggerWithValue<>).MakeGenericType(t), "Run");
-//    }
-//}

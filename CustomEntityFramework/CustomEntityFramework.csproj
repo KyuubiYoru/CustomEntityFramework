@@ -64,6 +64,7 @@
   <ItemGroup>
     <Compile Include="CallTargetManager.cs" />
     <Compile Include="Functions\DynamicImpulseTriggerPatch.cs" />
+    <Compile Include="Functions\DynamicImpulseTriggerWithValuePatch.cs" />
     <Compile Include="Functions\CustomFunctionLibrary.cs" />
     <Compile Include="DynamicVariableIdentity.cs" />
     <Compile Include="DynamicVariableSpaceHelper.cs" />

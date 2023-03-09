@@ -1,92 +1,45 @@
 ﻿using BaseX;
-using CloudX.Shared;
 using FrooxEngine;
-using FrooxEngine.LogiX.Input;
 using FrooxEngine.LogiX.ProgramFlow;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace CustomEntityFramework.Functions
 {
+    [HarmonyPatch(typeof(DynamicImpulseTrigger))]
     internal static class DynamicImpulseTriggerPatch
     {
-        private static readonly MethodInfo bareRunReceiverMethod = typeof(DynamicImpulseTriggerPatch).GetMethod(nameof(RunReceivers), AccessTools.all);
-        private static readonly Dictionary<Type, MethodInfo> genericRunReceiversMethods = new();
-        private static readonly MethodInfo prefix = typeof(DynamicImpulseTriggerPatch).GetMethod(nameof(Prefix), AccessTools.all);
-
-        public static void Patch(Harmony harmony)
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(DynamicImpulseTrigger.Run))]
+        private static bool RunPrefix(DynamicImpulseTrigger __instance)
         {
-            foreach (var type in CustomEntityFramework.NeosPrimitiveAndEnumTypes)
-            {
-                var createdType = typeof(DynamicImpulseTriggerWithValue<>).MakeGenericType(type);
-                var methodInfo = createdType.GetMethod("Run", AccessTools.allDeclared);
+            var tag = __instance.Tag.Evaluate();
+            var slot = __instance.TargetHierarchy.Evaluate();
+            var excludeDisabled = __instance.ExcludeDisabled.Evaluate(def: false);
 
-                harmony.Patch(methodInfo, new HarmonyMethod(prefix.MakeGenericMethod(type)));
-            }
-
-            //return CustomEntityFramework.GenerateGenericMethodTargets(
-            //    CustomEntityFramework.NeosPrimitiveAndEnumTypes,
-            //    nameof(DynamicImpulseTriggerWithValue<object>.Run),
-            //    typeof(DynamicImpulseTriggerWithValue<>));
-        }
-
-        public static bool Prefix<T>(DynamicImpulseTriggerWithValue<T> __instance)
-        {
-            if (!__instance.Enabled)
+            if (slot == null)
                 return false;
 
-            var tag = __instance.Tag.Evaluate();
-            var target = __instance.TargetHierarchy.Evaluate();
-
-            T value;
-            if (!tag.StartsWith(CustomFunctionLibrary.DynamicImpulseTagPrefix))
-            {
-                value = __instance.Value.Evaluate();
-            }
-            else
+            if (tag.StartsWith(CustomFunctionLibrary.DynamicImpulseTagPrefix))
             {
                 var name = tag.Remove(0, CustomFunctionLibrary.DynamicImpulseTagPrefix.Length);
-                value = CustomFunctionLibrary.InvokeFunction(name, __instance);
+                CustomFunctionLibrary.InvokeAction(name);
             }
 
-            // Here to preserve order of evaluations from original
-            var excludeDisabled = __instance.ExcludeDisabled.Evaluate();
+            var receivers = Pool.BorrowList<DynamicImpulseReceiver>();
+            slot.GetComponentsInChildren(receivers, (DynamicImpulseReceiver r) => r.Tag.Evaluate() == tag, excludeDisabled);
 
-            if (target != null)
-            {
-                var type = __instance.GetType().GetGenericArguments()[0];
+            foreach (var receiver in receivers)
+                receiver.Impulse.Trigger();
 
-                if (type.IsValueType)
-                    RunReceivers(target, tag, value, excludeDisabled);
-                else
-                {
-                    if (!genericRunReceiversMethods.TryGetValue(type, out var method))
-                    {
-                        method = bareRunReceiverMethod.MakeGenericMethod(type);
-                        genericRunReceiversMethods.Add(type, method);
-                    }
-
-                    method.Invoke(null, new object[] { target, tag, value, excludeDisabled });
-                }
-            }
-
+            Pool.Return(ref receivers);
             __instance.OnTriggered.Trigger();
 
             return false;
-        }
-
-        private static void RunReceivers<T>(Slot target, string tag, T value, bool excludeDisabled)
-        {
-            var list = Pool.BorrowList<DynamicImpulseReceiverWithValue<T>>();
-            target.GetComponentsInChildren(list, r => r.Tag.Evaluate() == tag, excludeDisabled);
-
-            foreach (var receiver in list)
-                receiver.Trigger(value);
-
-            Pool.Return(ref list);
         }
     }
 }
