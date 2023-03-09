@@ -8,7 +8,7 @@ using NeosModLoader;
 
 namespace CustomEntityFramework
 {
-    public class CallTargetManager
+    internal class CallTargetManager
     {
         private Dictionary<Type, Dictionary<string, Delegate>> _callTargets = new Dictionary<Type, Dictionary<string, Delegate>>();
 

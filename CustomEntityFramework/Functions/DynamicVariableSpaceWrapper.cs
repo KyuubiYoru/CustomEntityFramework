@@ -17,32 +17,27 @@ namespace CustomEntityFramework.Functions
         public static readonly Type SlotParameterType = typeof(Slot);
         public static readonly Type SpaceParameterType = typeof(DynamicVariableSpace);
         private static readonly Type voidType = typeof(void);
-        private readonly AccessWrapper[] parameterWrappers;
-        private readonly int slotParameterIndex = -1;
-        private readonly int spaceParameterIndex = -1;
-        private readonly object target;
-        public bool HasSlotParameter => slotParameterIndex >= 0;
+        private readonly Parameter[] parameterWrappers;
+        public bool HasSlotParameter { get; }
 
-        public bool HasSpaceParameter => spaceParameterIndex >= 0;
+        public bool HasSpaceParameter { get; }
 
         public int Parameters => parameterWrappers.Length;
         public bool RequiresSlot => HasSlotParameter || RequiresSpace;
-        public bool RequiresSpace => HasSpaceParameter || parameterWrappers.Length > 0;
+        public bool RequiresSpace { get; }
         public bool UseResult { get; }
         public bool WriteBack { get; } = false;
 
         public DynamicVariableSpaceWrapper(Delegate @delegate)
             : base(@delegate)
         {
-            target = @delegate.Target;
-
             if (@delegate.Method.ReturnType == SlotParameterType)
                 UseResult = true;
             else if (@delegate.Method.ReturnType != voidType)
                 throw new InvalidOperationException($"Return Type of method [{@delegate.Method.FullDescription()}] using {nameof(DynamicVariableSpaceWrapper)} must be void or Slot!");
 
             var parameters = @delegate.Method.GetParameters();
-            var wrappers = new List<AccessWrapper>(parameters.Length);
+            var wrappers = new List<Parameter>(parameters.Length);
 
             for (var i = 0; i < parameters.Length; ++i)
             {
@@ -53,9 +48,8 @@ namespace CustomEntityFramework.Functions
                     if (parameter.ParameterType != SlotParameterType)
                         throw new InvalidOperationException($"Found special Slot parameter name [{SlotParameterName}] with wrong Type [{parameter.ParameterType}] on potential custom method {@delegate.Method.FullDescription()}");
 
-                    slotParameterIndex = i;
-                    wrappers.Add(default);
-
+                    HasSlotParameter = true;
+                    wrappers.Add(new SlotParameter(parameter));
                     continue;
                 }
 
@@ -64,14 +58,16 @@ namespace CustomEntityFramework.Functions
                     if (parameter.ParameterType != SpaceParameterType)
                         throw new InvalidOperationException($"Found special DynamicVariableSpace parameter name [{SlotParameterName}] with wrong Type [{parameter.ParameterType}] on potential custom method {@delegate.Method.FullDescription()}");
 
-                    spaceParameterIndex = i;
-                    wrappers.Add(default);
-
+                    HasSpaceParameter = true;
+                    RequiresSpace = true;
+                    wrappers.Add(new SpaceParameter(parameter));
                     continue;
                 }
 
-                wrappers.Add(new AccessWrapper(parameter));
-                WriteBack |= parameter.ParameterType.IsByRef;
+                var wrapper = new VariableAccessParameter(parameter);
+                WriteBack |= wrapper.WriteBack;
+                wrappers.Add(wrapper);
+                RequiresSpace = true;
             }
 
             parameterWrappers = wrappers.ToArray();
@@ -102,29 +98,14 @@ namespace CustomEntityFramework.Functions
             var errors = false;
             var parameters = new object[Parameters];
 
-            if (HasSlotParameter)
-                parameters[slotParameterIndex] = spaceSlot;
-
-            if (HasSpaceParameter)
-                parameters[spaceParameterIndex] = space;
-
             for (var i = 0; i < Parameters; ++i)
             {
                 var wrapper = parameterWrappers[i];
 
-                if (i == slotParameterIndex || i == spaceParameterIndex)
-                    continue;
-
-                if (!wrapper.WriteOnly && !wrapper.TryReadValue(space, out parameters[i]))
+                if (!wrapper.WriteOnly && !wrapper.TryReadValue(spaceSlot, space, out parameters[i]))
                 {
-                    if (wrapper.IsOptional)
-                    {
-                        parameters[i] = wrapper.DefaultValue;
-                        continue;
-                    }
-
                     errors = true;
-                    CustomEntityFramework.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function while the non-optional parameter [{parameterWrappers}] is missing on the DynamicVariableSpace.");
+                    CustomEntityFramework.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function while the non-optional parameter [{wrapper}] is missing on the DynamicVariableSpace.");
                 }
             }
 
@@ -139,7 +120,7 @@ namespace CustomEntityFramework.Functions
                 {
                     var wrapper = parameterWrappers[i];
 
-                    if (i == slotParameterIndex || i == spaceParameterIndex || !wrapper.WriteBack)
+                    if (!wrapper.WriteBack || wrapper.ReadOnly)
                         continue;
 
                     wrapper.TryWriteValue(space, parameters[i]);
@@ -154,7 +135,7 @@ namespace CustomEntityFramework.Functions
 
         private delegate T TryGetValue<T>(string name, out T value);
 
-        private readonly struct AccessWrapper
+        private abstract class Parameter
         {
             public readonly object DefaultValue;
             public readonly bool IsOptional;
@@ -162,58 +143,109 @@ namespace CustomEntityFramework.Functions
             public readonly Type Type;
             public readonly bool WriteBack;
             public readonly bool WriteOnly;
-            private static readonly MethodInfo bareReadMethod = typeof(DynamicVariableSpace).GetMethod(nameof(DynamicVariableSpace.TryReadValue));
-            private static readonly MethodInfo bareWriteMethod = typeof(DynamicVariableSpace).GetMethod(nameof(DynamicVariableSpace.TryWriteValue));
+            public abstract bool ReadOnly { get; }
 
-            private static readonly Dictionary<Type, MethodInfo> readMethodCache = new();
-            private static readonly Dictionary<Type, MethodInfo> writeMethodCache = new();
-
-            private readonly MethodInfo readMethod;
-            private readonly MethodInfo writeMethod;
-
-            public AccessWrapper(Type type, string name, bool writeBack, bool writeOnly, bool isOptional, object defaultValue)
+            public Parameter(ParameterInfo parameter)
             {
-                Type = type;
-                Name = name;
-                WriteBack = writeBack;
-                WriteOnly = writeOnly;
-                IsOptional = isOptional;
-                DefaultValue = defaultValue;
-
-                if (!readMethodCache.TryGetValue(type, out readMethod))
-                {
-                    readMethod = bareReadMethod.MakeGenericMethod(type);
-                    readMethodCache.Add(type, readMethod);
-                }
-
-                if (!writeMethodCache.TryGetValue(type, out writeMethod))
-                {
-                    writeMethod = bareWriteMethod.MakeGenericMethod(type);
-                    writeMethodCache.Add(type, writeMethod);
-                }
+                Type = parameter.ParameterType;
+                Name = parameter.Name;
+                WriteBack = parameter.ParameterType.IsByRef;
+                WriteOnly = WriteBack && parameter.IsOut;
+                IsOptional = parameter.IsOptional;
+                DefaultValue = parameter.HasDefaultValue ? parameter.DefaultValue : parameter.ParameterType.GetDefaultValue();
             }
-
-            public AccessWrapper(ParameterInfo parameter)
-                : this(parameter.ParameterType, parameter.Name,
-                      parameter.ParameterType.IsByRef,
-                      parameter.ParameterType.IsByRef && parameter.IsOut,
-                      parameter.IsOptional,
-                      parameter.HasDefaultValue ? parameter.DefaultValue : parameter.ParameterType.GetDefaultValue())
-            { }
 
             public override string ToString() => $"{Type} {Name}";
 
-            public bool TryReadValue(DynamicVariableSpace space, out object value)
+            public abstract bool TryReadValue(Slot slot, DynamicVariableSpace space, out object value);
+
+            public abstract bool TryWriteValue(DynamicVariableSpace space, object value);
+        }
+
+        private sealed class SlotParameter : Parameter
+        {
+            public override bool ReadOnly { get; } = true;
+
+            public SlotParameter(ParameterInfo parameter)
+                : base(parameter)
+            { }
+
+            public override bool TryReadValue(Slot slot, DynamicVariableSpace space, out object value)
+            {
+                value = slot;
+                return true;
+            }
+
+            public override bool TryWriteValue(DynamicVariableSpace space, object value)
+            {
+                return false;
+            }
+        }
+
+        private sealed class SpaceParameter : Parameter
+        {
+            public override bool ReadOnly { get; } = true;
+
+            public SpaceParameter(ParameterInfo parameter)
+                : base(parameter)
+            { }
+
+            public override bool TryReadValue(Slot slot, DynamicVariableSpace space, out object value)
+            {
+                value = space;
+                return true;
+            }
+
+            public override bool TryWriteValue(DynamicVariableSpace space, object value)
+            {
+                return false;
+            }
+        }
+
+        private sealed class VariableAccessParameter : Parameter
+        {
+            private static readonly MethodInfo bareReadMethod = typeof(DynamicVariableSpace).GetMethod(nameof(DynamicVariableSpace.TryReadValue));
+            private static readonly MethodInfo bareWriteMethod = typeof(DynamicVariableSpace).GetMethod(nameof(DynamicVariableSpace.TryWriteValue));
+            private static readonly Dictionary<Type, MethodInfo> readMethodCache = new();
+            private static readonly Dictionary<Type, MethodInfo> writeMethodCache = new();
+            private readonly MethodInfo readMethod;
+            private readonly MethodInfo writeMethod;
+
+            public override bool ReadOnly { get; } = false;
+
+            public VariableAccessParameter(ParameterInfo parameter)
+                : base(parameter)
+            {
+                if (!readMethodCache.TryGetValue(Type, out readMethod))
+                {
+                    readMethod = bareReadMethod.MakeGenericMethod(Type);
+                    readMethodCache.Add(Type, readMethod);
+                }
+
+                if (!writeMethodCache.TryGetValue(Type, out writeMethod))
+                {
+                    writeMethod = bareWriteMethod.MakeGenericMethod(Type);
+                    writeMethodCache.Add(Type, writeMethod);
+                }
+            }
+
+            public override bool TryReadValue(Slot slot, DynamicVariableSpace space, out object value)
             {
                 var parameters = new object[] { Name, null };
 
                 var success = (bool)readMethod.Invoke(space, parameters);
 
+                if (!success && IsOptional)
+                {
+                    value = DefaultValue;
+                    return true;
+                }
+
                 value = parameters[1];
                 return success;
             }
 
-            public bool TryWriteValue(DynamicVariableSpace space, object value)
+            public override bool TryWriteValue(DynamicVariableSpace space, object value)
             {
                 return (bool)writeMethod.Invoke(space, new object[] { Name, value });
             }

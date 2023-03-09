@@ -70,7 +70,7 @@
     <Compile Include="DynamicVariable.cs" />
     <Compile Include="Functions\DynamicVariableSpaceWrapper.cs" />
     <Compile Include="Functions\FunctionWrapper.cs" />
-    <Compile Include="Functions\ImpulseValueWrapper.cs" />
+    <Compile Include="Functions\DynamicImpulseTriggerValueWrapper.cs" />
     <Compile Include="CustomEntityFramework.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

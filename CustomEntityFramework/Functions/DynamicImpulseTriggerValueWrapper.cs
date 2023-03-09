@@ -3,11 +3,11 @@ using System;
 
 namespace CustomEntityFramework.Functions
 {
-    internal sealed class ImpulseValueWrapper<T> : FunctionWrapper<T>
+    internal sealed class DynamicImpulseTriggerValueWrapper<T> : FunctionWrapper<T>
     {
         public Func<T, T> Function { get; }
 
-        public ImpulseValueWrapper(Func<T, T> function)
+        public DynamicImpulseTriggerValueWrapper(Func<T, T> function)
             : base(function)
         {
             Function = function;

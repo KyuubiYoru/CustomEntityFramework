@@ -131,13 +131,13 @@ namespace CustomEntityFramework.Functions
             public static void RegisterFunction(string name, Func<T, T> function)
             {
                 registeredFunctions.ThrowIfExists(name);
-                registeredFunctions.Add(name, new ImpulseValueWrapper<T>(function));
+                registeredFunctions.Add(name, new DynamicImpulseTriggerValueWrapper<T>(function));
             }
 
             public static void RegisterFunction(string name, Func<T> function)
             {
                 registeredFunctions.ThrowIfExists(name);
-                registeredFunctions.Add(name, new ImpulseValueWrapper<T>((T _) => function()));
+                registeredFunctions.Add(name, new DynamicImpulseTriggerValueWrapper<T>((T _) => function()));
             }
 
             public static void RegisterFunction(string name, Delegate @delegate)
