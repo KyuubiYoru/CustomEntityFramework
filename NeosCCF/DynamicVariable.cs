@@ -11,7 +11,7 @@ namespace NeosCCF
 {
     public abstract class DynamicVariable
     {
-        private static readonly Type bareDynamicVariableType = typeof(DynamicValueVariable<>);
+        private static readonly Type bareDynamicVariableType = typeof(DynamicVariable<>);
         private static readonly Dictionary<Type, ConstructorInfo> genericDynamicVariableConstructors = new();
         public string Name { get; }
 
