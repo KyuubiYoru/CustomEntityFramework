@@ -28,12 +28,12 @@ namespace CustomEntityFramework
             Name = name;
         }
 
-        public static DynamicVariable Create(DynamicVariableIdentity identity, DynamicVariableSpace.ValueManager manager)
+        public static DynamicVariable Create(DynamicVariableSpace.VariableIdentity identity, DynamicVariableSpace.ValueManager manager)
         {
-            if (!genericDynamicVariableConstructors.TryGetValue(identity.Type, out var constructor))
+            if (!genericDynamicVariableConstructors.TryGetValue(identity.type, out var constructor))
             {
-                constructor = bareDynamicVariableType.MakeGenericType(identity.Type).GetConstructors().First(ctr => ctr.GetParameters().Length == 1);
-                genericDynamicVariableConstructors.Add(identity.Type, constructor);
+                constructor = bareDynamicVariableType.MakeGenericType(identity.type).GetConstructors().First(ctr => ctr.GetParameters().Length == 1);
+                genericDynamicVariableConstructors.Add(identity.type, constructor);
             }
 
             return (DynamicVariable)constructor.Invoke(new object[] { manager });

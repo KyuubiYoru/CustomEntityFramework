@@ -33,21 +33,14 @@ namespace CustomEntityFramework
             return space.GetVariables(variable => variable.Type == type).Cast<DynamicVariable<T>>();
         }
 
-        public static IEnumerable<DynamicVariable> GetVariables(this DynamicVariableSpace space, Predicate<DynamicVariable> predicate)
+        public static IEnumerable<DynamicVariable> GetVariables(this DynamicVariableSpace space, Func<DynamicVariable, bool> predicate)
         {
-            foreach (var variable in space.GetVariables())
-                if (predicate(variable))
-                    yield return variable;
+            return space.GetVariables().Where(predicate);
         }
 
         public static IEnumerable<DynamicVariable> GetVariables(this DynamicVariableSpace space)
         {
-            var enumerator = ((IDictionary)Traverse.Create(space).Field("_dynamicValues").GetValue()).GetEnumerator();
-
-            while (enumerator.MoveNext())
-            {
-                yield return DynamicVariable.Create(new DynamicVariableIdentity(enumerator.Key), (DynamicVariableSpace.ValueManager)enumerator.Value);
-            }
+            return space._dynamicValues.Select(variable => DynamicVariable.Create(variable.Key, variable.Value));
         }
     }
 }

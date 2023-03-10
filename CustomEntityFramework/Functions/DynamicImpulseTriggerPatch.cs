@@ -19,7 +19,7 @@ namespace CustomEntityFramework.Functions
         {
             var tag = __instance.Tag.Evaluate();
             var slot = __instance.TargetHierarchy.Evaluate();
-            var excludeDisabled = __instance.ExcludeDisabled.Evaluate(def: false);
+            var excludeDisabled = __instance.ExcludeDisabled.Evaluate();
 
             if (slot == null)
                 return false;
