@@ -16,6 +16,6 @@ namespace CustomEntityFramework.Functions
             Delegate = @delegate;
         }
 
-        public abstract T Invoke(DynamicImpulseTriggerWithValue<T> dynImpulseTrigger);
+        public abstract bool Invoke(DynamicImpulseTriggerWithValue<T> dynImpulseTrigger, out T result);
     }
 }

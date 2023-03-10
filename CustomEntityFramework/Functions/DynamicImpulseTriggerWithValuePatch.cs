@@ -41,15 +41,12 @@ namespace CustomEntityFramework.Functions
             var tag = __instance.Tag.Evaluate();
             var target = __instance.TargetHierarchy.Evaluate();
 
-            T value;
-            if (!tag.StartsWith(CustomFunctionLibrary.DynamicImpulseTagPrefix))
+            T value = default;
+            var invokeCustom = tag.StartsWith(CustomFunctionLibrary.DynamicImpulseTagPrefix);
+
+            if (!invokeCustom)
             {
                 value = __instance.Value.Evaluate();
-            }
-            else
-            {
-                var name = tag.Remove(0, CustomFunctionLibrary.DynamicImpulseTagPrefix.Length);
-                value = CustomFunctionLibrary.InvokeFunction(name, __instance);
             }
 
             // Here to preserve order of evaluations from original
@@ -57,6 +54,13 @@ namespace CustomEntityFramework.Functions
 
             if (target == null)
                 return false;
+
+            if (invokeCustom)
+            {
+                var name = tag.Remove(0, CustomFunctionLibrary.DynamicImpulseTagPrefix.Length);
+                if (!CustomFunctionLibrary.InvokeFunction(name, __instance, out value))
+                    return false;
+            }
 
             var type = __instance.GetType().GetGenericArguments()[0];
 

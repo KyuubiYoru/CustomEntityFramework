@@ -73,14 +73,15 @@ namespace CustomEntityFramework.Functions
             parameterWrappers = wrappers.ToArray();
         }
 
-        public override Slot Invoke(DynamicImpulseTriggerWithValue<Slot> dynImpulseTrigger)
+        public override bool Invoke(DynamicImpulseTriggerWithValue<Slot> dynImpulseTrigger, out Slot result)
         {
             var spaceSlot = dynImpulseTrigger.Value.Evaluate();
+            result = spaceSlot;
 
             if (RequiresSlot && spaceSlot == null)
             {
                 CustomEntityFramework.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function without the necessary Slot as the value.");
-                return null;
+                return false;
             }
 
             if (spaceSlot.GetComponent<DynamicVariableSpace>(matchSpace) is not DynamicVariableSpace space)
@@ -88,8 +89,7 @@ namespace CustomEntityFramework.Functions
                 if (RequiresSpace)
                 {
                     CustomEntityFramework.Warn($"Attempt to call [{Delegate.Method.FullDescription()}] as a custom function without a proper {CustomFunctionLibrary.DynamicVariableSpaceName}-DynamicVariableSpace as the value.");
-
-                    return null;
+                    return false;
                 }
 
                 space = null;
@@ -110,9 +110,12 @@ namespace CustomEntityFramework.Functions
             }
 
             if (errors)
-                return null;
+                return false;
 
-            var result = Delegate.DynamicInvoke(parameters);
+            if (UseResult)
+                result = (Slot)Delegate.DynamicInvoke(parameters);
+            else
+                Delegate.DynamicInvoke(parameters);
 
             if (WriteBack)
             {
@@ -127,7 +130,7 @@ namespace CustomEntityFramework.Functions
                 }
             }
 
-            return UseResult ? (Slot)result : spaceSlot;
+            return true;
         }
 
         private static bool matchSpace(DynamicVariableSpace space)

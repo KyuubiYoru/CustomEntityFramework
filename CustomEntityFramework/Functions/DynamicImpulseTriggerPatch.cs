@@ -27,7 +27,9 @@ namespace CustomEntityFramework.Functions
             if (tag.StartsWith(CustomFunctionLibrary.DynamicImpulseTagPrefix))
             {
                 var name = tag.Remove(0, CustomFunctionLibrary.DynamicImpulseTagPrefix.Length);
-                CustomFunctionLibrary.InvokeAction(name);
+
+                if (!CustomFunctionLibrary.InvokeAction(name))
+                    return false;
             }
 
             var receivers = Pool.BorrowList<DynamicImpulseReceiver>();

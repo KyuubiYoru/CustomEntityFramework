@@ -5,17 +5,18 @@ namespace CustomEntityFramework.Functions
 {
     internal sealed class DynamicImpulseTriggerValueWrapper<T> : FunctionWrapper<T>
     {
-        public Func<T, T> Function { get; }
+        public new Func<T, T> Delegate { get; }
 
         public DynamicImpulseTriggerValueWrapper(Func<T, T> function)
             : base(function)
         {
-            Function = function;
+            Delegate = function;
         }
 
-        public override T Invoke(DynamicImpulseTriggerWithValue<T> dynImpulseTrigger)
+        public override bool Invoke(DynamicImpulseTriggerWithValue<T> dynImpulseTrigger, out T result)
         {
-            return Function(dynImpulseTrigger.Value.Evaluate());
+            result = Delegate(dynImpulseTrigger.Value.Evaluate());
+            return true;
         }
     }
 }
