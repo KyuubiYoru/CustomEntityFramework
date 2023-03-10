@@ -20,8 +20,8 @@ namespace CustomEntityFramework.Functions
         public const string DynamicImpulseTagPrefix = DynamicVariableSpaceName + ".";
         public const string DynamicVariableSpaceName = "CF";
 
-        private static readonly Type bareInternalLibraryType = typeof(InternalLibrary<>);
-        private static readonly Dictionary<Type, MethodInfo> genericInvokeFunctions = new();
+        private static readonly GenericTypeMethodsInvoker genericInternalLibraryInvoker = new(typeof(InternalLibrary<>));
+        private static readonly MethodInfo internalInvokeMethod = typeof(InternalLibrary<>).GetMethod("Invoke");
         private static readonly Dictionary<string, Action> registeredActions = new();
 
         /// <summary>
@@ -102,8 +102,8 @@ namespace CustomEntityFramework.Functions
             }
             catch (Exception e)
             {
-                CustomEntityFramework.Debug(e.Message);
-                CustomEntityFramework.Debug(e);
+                CustomEntityFramework.Msg(e.Message);
+                CustomEntityFramework.Msg(e);
             }
 
             return false;
@@ -126,22 +126,16 @@ namespace CustomEntityFramework.Functions
                 if (type.IsValueType)
                     return InternalLibrary<T>.Invoke(name, dynImpulseTrigger, out result);
 
-                if (!genericInvokeFunctions.TryGetValue(type, out var method))
-                {
-                    method = bareInternalLibraryType.MakeGenericType(type).GetMethod(nameof(InternalLibrary<T>.Invoke));
-                    genericInvokeFunctions.Add(type, method);
-                }
-
                 var parameters = new object[] { name, dynImpulseTrigger, default(T) };
-                var success = (bool)method.Invoke(null, parameters);
+                var success = genericInternalLibraryInvoker.Invoke<bool>(internalInvokeMethod, type, parameters);
 
                 result = (T)parameters[2];
                 return success;
             }
             catch (Exception e)
             {
-                CustomEntityFramework.Debug(e.Message);
-                CustomEntityFramework.Debug(e);
+                CustomEntityFramework.Msg(e.Message);
+                CustomEntityFramework.Msg(e);
 
                 result = default;
                 return false;

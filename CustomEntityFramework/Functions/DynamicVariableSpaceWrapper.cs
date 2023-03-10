@@ -207,36 +207,20 @@ namespace CustomEntityFramework.Functions
 
         private sealed class VariableAccessParameter : Parameter
         {
-            private static readonly MethodInfo bareReadMethod = typeof(DynamicVariableSpace).GetMethod(nameof(DynamicVariableSpace.TryReadValue));
-            private static readonly MethodInfo bareWriteMethod = typeof(DynamicVariableSpace).GetMethod(nameof(DynamicVariableSpace.TryWriteValue));
-            private static readonly Dictionary<Type, MethodInfo> readMethodCache = new();
-            private static readonly Dictionary<Type, MethodInfo> writeMethodCache = new();
-            private readonly MethodInfo readMethod;
-            private readonly MethodInfo writeMethod;
+            private static readonly GenericMethodInvoker<DynamicVariableSpace, bool> readMethodInvoker = new(typeof(DynamicVariableSpace).GetMethod(nameof(DynamicVariableSpace.TryReadValue)));
+            private static readonly GenericMethodInvoker<DynamicVariableSpace, bool> writeMethodInvoker = new(typeof(DynamicVariableSpace).GetMethod(nameof(DynamicVariableSpace.TryWriteValue)));
 
             public override bool ReadOnly { get; } = false;
 
             public VariableAccessParameter(ParameterInfo parameter)
                 : base(parameter)
-            {
-                if (!readMethodCache.TryGetValue(Type, out readMethod))
-                {
-                    readMethod = bareReadMethod.MakeGenericMethod(Type);
-                    readMethodCache.Add(Type, readMethod);
-                }
-
-                if (!writeMethodCache.TryGetValue(Type, out writeMethod))
-                {
-                    writeMethod = bareWriteMethod.MakeGenericMethod(Type);
-                    writeMethodCache.Add(Type, writeMethod);
-                }
-            }
+            { }
 
             public override bool TryReadValue(Slot slot, DynamicVariableSpace space, out object value)
             {
                 var parameters = new object[] { Name, null };
 
-                var success = (bool)readMethod.Invoke(space, parameters);
+                var success = readMethodInvoker.Invoke(space, Type, parameters);
 
                 if (!success && IsOptional)
                 {
@@ -250,7 +234,7 @@ namespace CustomEntityFramework.Functions
 
             public override bool TryWriteValue(DynamicVariableSpace space, object value)
             {
-                return (bool)writeMethod.Invoke(space, new object[] { Name, value });
+                return writeMethodInvoker.Invoke(space, Type, Name, value);
             }
         }
     }

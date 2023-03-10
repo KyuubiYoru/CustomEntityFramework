@@ -13,9 +13,9 @@ namespace CustomEntityFramework.Functions
 {
     internal static class DynamicImpulseTriggerWithValuePatch
     {
-        private static readonly MethodInfo bareRunReceiverMethod = typeof(DynamicImpulseTriggerWithValuePatch).GetMethod(nameof(RunReceivers), AccessTools.all);
-        private static readonly Dictionary<Type, MethodInfo> genericRunReceiversMethods = new();
         private static readonly MethodInfo prefix = typeof(DynamicImpulseTriggerWithValuePatch).GetMethod(nameof(Prefix), AccessTools.all);
+
+        private static readonly GenericMethodInvoker runReceiversInvoker = new(typeof(DynamicImpulseTriggerWithValuePatch).GetMethod(nameof(RunReceivers), AccessTools.all));
 
         public static void Patch(Harmony harmony)
         {
@@ -67,15 +67,7 @@ namespace CustomEntityFramework.Functions
             if (type.IsValueType)
                 RunReceivers(target, tag, value, excludeDisabled);
             else
-            {
-                if (!genericRunReceiversMethods.TryGetValue(type, out var method))
-                {
-                    method = bareRunReceiverMethod.MakeGenericMethod(type);
-                    genericRunReceiversMethods.Add(type, method);
-                }
-
-                method.Invoke(null, new object[] { target, tag, value, excludeDisabled });
-            }
+                runReceiversInvoker.Invoke(type, target, tag, value, excludeDisabled);
 
             __instance.OnTriggered.Trigger();
 
