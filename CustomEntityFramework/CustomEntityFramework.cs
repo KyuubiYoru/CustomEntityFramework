@@ -18,7 +18,7 @@ namespace CustomEntityFramework
     public class CustomEntityFramework : NeosMod
     {
         internal static readonly Type[] NeosPrimitiveAndEnumTypes;
-        public override string Author => "KyuubiYoru";
+        public override string Author => "Banane9, KyuubiYoru";
         public override string Link => "https://github.com/KyuubiYoru/NeosCCF.git";
         public override string Name => "CustomEntityFramework";
         public override string Version => "1.0.0";
