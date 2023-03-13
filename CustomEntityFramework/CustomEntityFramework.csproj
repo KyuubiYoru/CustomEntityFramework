@@ -13,7 +13,7 @@
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
-    <ProjectGuid>{0322B2EF-7452-479D-BAE2-FCAB75033337}</ProjectGuid>
+    <ProjectGuid>{416CFE72-E1C3-4AD0-9D62-F46C434A99C3}</ProjectGuid>
     <NeosPath>$(MSBuildThisFileDirectory)NeosVR</NeosPath>
     <NeosPath Condition="Exists('C:\Neos\app\')">C:\Neos\app\</NeosPath>
     <NeosPath Condition="Exists('E:\NeosVR\Install\app\')">E:\NeosVR\Install\app\</NeosPath>
